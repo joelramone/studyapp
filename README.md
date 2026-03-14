@@ -57,16 +57,16 @@ Copy-Item .env.example .env
 
 ## Ejecución local
 
-Ejecuta siempre desde la raíz del repo (`studyapp/`):
-
-```bash
-streamlit run app/streamlit_app.py
-```
-
-Alternativa equivalente:
+Ejecuta siempre desde la raíz del repo (`studyapp/`) con este comando exacto:
 
 ```bash
 python -m streamlit run app/streamlit_app.py
+```
+
+Comando alternativo (equivalente):
+
+```bash
+streamlit run app/streamlit_app.py
 ```
 
 ## Variables de entorno
