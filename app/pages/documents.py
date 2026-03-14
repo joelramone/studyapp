@@ -7,11 +7,11 @@ from app.pages.utils import list_processed_documents
 
 def render() -> None:
     st.subheader("2) Documents")
-    st.write("Explora documentos procesados, capítulos detectados y selecciona contexto de trabajo.")
+    st.write("Explora documentos procesados (PDF o Notes), capítulos detectados y selecciona contexto de trabajo.")
 
     docs = list_processed_documents()
     if not docs:
-        st.info("No hay documentos procesados todavía. Ve a Upload para procesar un PDF.")
+        st.info("No hay documentos procesados todavía. Ve a Upload para comenzar.")
         return
 
     doc_options = {f"{doc['metadata'].get('title', doc['slug'])} ({doc['slug']})": doc for doc in docs}
@@ -38,6 +38,7 @@ def render() -> None:
         [
             {
                 "title": m.get("title", "-"),
+                "input_mode": m.get("input_mode", "-"),
                 "pages": m.get("page_count", 0),
                 "chapters": m.get("chapter_count", 0),
                 "chunks": m.get("chunk_count", 0),

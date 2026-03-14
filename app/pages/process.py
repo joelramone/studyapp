@@ -14,7 +14,7 @@ from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_
 
 
 OUTPUT_LABELS = {
-    "summary": "summary",
+    "architecture": "architecture",
     "concepts": "concepts",
     "mindmap": "mindmap",
     "flashcards": "flashcards",
@@ -42,10 +42,10 @@ def _run_for_chapter(chapter_path: Path, selected_outputs: dict[str, bool]) -> l
 
     generated: list[str] = []
 
-    if selected_outputs.get("summary"):
+    if selected_outputs.get("architecture"):
         architecture = ArchitectureAgent().run(content, chapter_path)
         (chapter_path / "summary.md").write_text(architecture.summary_md, encoding="utf-8")
-        generated.extend(["summary", "architecture"])
+        generated.append("architecture")
 
     if selected_outputs.get("concepts"):
         ConceptAgent().run(content, chapter_path)

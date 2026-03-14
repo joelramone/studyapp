@@ -119,3 +119,9 @@ class MindmapAgentResponse(DomainModel):
 
         walk(self.root)
         return "\n".join(lines)
+
+
+class NotesInputPayload(DomainModel):
+    title: str = Field(min_length=1, max_length=400)
+    notes: str = Field(min_length=1)
+    language: str = Field(default="es", min_length=2, max_length=10)

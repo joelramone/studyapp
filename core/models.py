@@ -40,6 +40,11 @@ class DocumentStatus(str, Enum):
     ARCHIVED = "archived"
 
 
+class DocumentInputMode(str, Enum):
+    PDF = "pdf"
+    NOTES = "notes"
+
+
 class AgentType(str, Enum):
     CONCEPT = "concept"
     ARCHITECTURE = "architecture"
@@ -143,6 +148,7 @@ class Document(TimestampedModel):
     slug: Optional[str] = None
     raw_text: str = Field(min_length=1)
     language: str = Field(default="es", min_length=2, max_length=10)
+    input_mode: DocumentInputMode = DocumentInputMode.PDF
     status: DocumentStatus = DocumentStatus.DRAFT
     chapters: List[Chapter] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
