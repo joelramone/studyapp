@@ -37,6 +37,8 @@ study_brain/
 
 ## Instalación
 
+### Linux/macOS
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -44,10 +46,27 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-## Ejecución
+### Windows (PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+## Ejecución local
+
+Ejecuta siempre desde la raíz del repo (`studyapp/`):
 
 ```bash
 streamlit run app/streamlit_app.py
+```
+
+Alternativa equivalente:
+
+```bash
+python -m streamlit run app/streamlit_app.py
 ```
 
 ## Variables de entorno
@@ -67,7 +86,6 @@ Ver `.env.example`:
 ```bash
 pytest -q
 ```
-
 
 ## Modelos de dominio y contratos JSON
 
