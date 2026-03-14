@@ -23,7 +23,7 @@ def _init_session_state() -> None:
     st.session_state.setdefault(
         "selected_outputs",
         {
-            "summary": True,
+            "architecture": True,
             "concepts": True,
             "mindmap": True,
             "flashcards": True,
@@ -34,7 +34,7 @@ def _init_session_state() -> None:
 
 def _sidebar() -> str:
     st.sidebar.header("study_brain")
-    st.sidebar.caption("Segundo cerebro técnico para estudiar PDFs")
+    st.sidebar.caption("Segundo cerebro técnico para estudiar desde PDFs o Notes")
     st.sidebar.divider()
     st.sidebar.write(f"Modelo: `{settings.openai_model}`")
     st.sidebar.write(f"Input PDFs: `{settings.data_dir / 'pdfs'}`")

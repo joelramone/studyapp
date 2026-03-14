@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class LocalStorage:
-    """Persist processed PDF artifacts on local filesystem."""
+    """Persist processed document artifacts on local filesystem."""
 
     def __init__(self, base_output_dir: Path) -> None:
         self.base_output_dir = base_output_dir
@@ -59,6 +59,7 @@ class LocalStorage:
             "title": document.title,
             "slug": document.slug,
             "source_path": str(document.source_path),
+            "input_mode": document.input_mode,
             "status": document.status,
             "language": document.language,
             "page_count": len(pages),
@@ -66,6 +67,7 @@ class LocalStorage:
             "chunk_count": sum(len(items) for items in chunks_by_chapter.values()),
             "created_at": document.created_at.isoformat(),
             "updated_at": document.updated_at.isoformat(),
+            "metadata": document.metadata,
         }
 
     def _build_chapters_index(
