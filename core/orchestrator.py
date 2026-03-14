@@ -2,15 +2,10 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
-from agents.architecture_agent import ArchitectureAgent
-from agents.concept_agent import ConceptAgent
-from agents.exam_agent import ExamAgent
-from agents.flashcard_agent import FlashcardAgent
-from agents.mindmap_agent import MindmapAgent
 from core.config import settings
-from core.models import AgentOutput, Chapter, Document
+from core.models import Chunk, Document, DocumentStatus
 from services.chapter_splitter import ChapterSplitter
 from services.chunker import TextChunker
 from services.pdf_reader import PDFReader
@@ -20,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class StudyBrainOrchestrator:
-    """Coordinates reading, chapter segmentation, agent generation and storage."""
+    """Run the PDF processing pipeline: reader -> splitter -> chunker -> storage."""
 
     def __init__(self) -> None:
         self.reader = PDFReader()
@@ -28,50 +23,69 @@ class StudyBrainOrchestrator:
         self.chunker = TextChunker(settings.chunk_size, settings.chunk_overlap)
         self.storage = LocalStorage(settings.output_dir)
 
-        self.summary_agent = ArchitectureAgent()
-        self.concept_agent = ConceptAgent()
-        self.mindmap_agent = MindmapAgent()
-        self.flashcard_agent = FlashcardAgent()
-        self.exam_agent = ExamAgent()
+    def process_pdf(self, pdf_path: Path) -> Dict[str, Any]:
+        logger.info("Starting PDF processing pipeline for %s", pdf_path)
 
-    def process_pdf(self, pdf_path: Path) -> List[AgentOutput]:
-        raw_text = self.reader.read(pdf_path)
+        extraction = self.reader.read(pdf_path)
+        raw_text = extraction["raw_text"]
+        pages = extraction["pages"]
+
         chapters = self.splitter.split(raw_text)
-        document = Document(source_path=pdf_path, title=pdf_path.stem, raw_text=raw_text, chapters=chapters)
+        if not chapters:
+            logger.warning("No chapters could be created from PDF '%s'", pdf_path)
 
-        outputs: List[AgentOutput] = []
+        document = Document(
+            source_path=pdf_path,
+            title=pdf_path.stem,
+            raw_text=raw_text if raw_text else " ",
+            chapters=chapters,
+            status=DocumentStatus.PROCESSED,
+            metadata={
+                "page_count": extraction["page_count"],
+                "reader": "pymupdf",
+                "ocr_ready": True,
+                "empty_text_pages": sum(1 for page in pages if page.get("needs_ocr")),
+            },
+        )
+
+        chunks_by_chapter: Dict[int, List[Chunk]] = {}
         for chapter in document.chapters:
-            outputs.append(self._process_chapter(document.title, chapter))
-        return outputs
+            try:
+                chapter_chunks = self.chunker.chunk_chapter(chapter)
+            except Exception as exc:
+                logger.exception("Chunking failed for chapter %s", chapter.index)
+                raise RuntimeError(f"Failed to chunk chapter {chapter.index}") from exc
+            chunks_by_chapter[chapter.index] = chapter_chunks
 
-    def _process_chapter(self, document_title: str, chapter: Chapter) -> AgentOutput:
-        logger.info("Processing chapter %s: %s", chapter.index, chapter.title)
-        chapter_context = "\n\n".join(self.chunker.chunk(chapter.content)[:3]) or chapter.content
+        output_path = self.storage.save_processed_document(document, pages, chunks_by_chapter)
 
-        summary_md = self.summary_agent.run(chapter_context)
-        concepts = self.concept_agent.run(chapter_context)
-        mindmap_md = self.mindmap_agent.run(chapter_context)
-        flashcards_csv = self.flashcard_agent.run(chapter_context)
-        exam_questions_md = self.exam_agent.run(chapter_context)
+        pipeline_output = {
+            "document": {
+                "document_id": document.id,
+                "title": document.title,
+                "slug": document.slug,
+                "source_path": str(document.source_path),
+                "metadata": document.metadata,
+                "output_path": str(output_path),
+            },
+            "pages": pages,
+            "chapters": [
+                {
+                    "chapter_id": chapter.id,
+                    "index": chapter.index,
+                    "title": chapter.title,
+                    "content": chapter.content,
+                    "metadata": chapter.metadata,
+                    "chunks": [chunk.model_dump(mode="json") for chunk in chunks_by_chapter.get(chapter.index, [])],
+                }
+                for chapter in document.chapters
+            ],
+        }
 
-        output = AgentOutput(
-            chapter_index=chapter.index,
-            summary_md=summary_md,
-            concepts=concepts,
-            mindmap_md=mindmap_md,
-            flashcards_csv=flashcards_csv,
-            exam_questions_md=exam_questions_md,
+        logger.info(
+            "Pipeline finished for %s | chapters=%s | chunks=%s",
+            pdf_path.name,
+            len(document.chapters),
+            sum(len(value) for value in chunks_by_chapter.values()),
         )
-        self._persist(document_title, output)
-        return output
-
-    def _persist(self, document_title: str, output: AgentOutput) -> None:
-        chapter_dir = self.storage.chapter_dir(document_title, output.chapter_index)
-        self.storage.save_text(chapter_dir / "summary.md", output.summary_md)
-        self.storage.save_json(
-            chapter_dir / "concepts.json",
-            [concept.model_dump() for concept in output.concepts],
-        )
-        self.storage.save_text(chapter_dir / "mindmap.md", output.mindmap_md)
-        self.storage.save_text(chapter_dir / "flashcards.csv", output.flashcards_csv)
-        self.storage.save_text(chapter_dir / "exam_questions.md", output.exam_questions_md)
+        return pipeline_output
