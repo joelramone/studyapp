@@ -18,10 +18,26 @@ from core.models import (
 )
 
 
+class TermDefinition(DomainModel):
+    term: str = Field(min_length=1)
+    definition: str = Field(min_length=1)
+
+
+class TermRelationship(DomainModel):
+    source_term: str = Field(min_length=1)
+    target_term: str = Field(min_length=1)
+    relation: str = Field(min_length=1)
+    explanation: str = Field(min_length=1)
+
+
 class ConceptAgentResponse(DomainModel):
     schema_version: str = "1.0"
     generated_at: str = Field(default_factory=lambda: utc_now().isoformat())
+    summary: str = Field(default="")
     concepts: List[ConceptItem] = Field(default_factory=list)
+    definitions: List[TermDefinition] = Field(default_factory=list)
+    relationships: List[TermRelationship] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
 
 
 class ArchitectureFlowStep(DomainModel):
@@ -38,6 +54,8 @@ class ArchitectureAgentResponse(DomainModel):
     components: List[ArchitectureComponent] = Field(default_factory=list)
     relationships: List[Relationship] = Field(default_factory=list)
     flow_steps: List[ArchitectureFlowStep] = Field(default_factory=list)
+    use_cases: List[str] = Field(default_factory=list)
+    common_errors: List[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_flow_order(self) -> "ArchitectureAgentResponse":
@@ -57,16 +75,14 @@ class FlashcardAgentResponse(DomainModel):
     def to_csv(self) -> str:
         stream = StringIO()
         writer = csv.writer(stream)
-        writer.writerow(["id", "front", "back", "difficulty", "tags", "explanation"])
+        writer.writerow(["front", "back", "tags", "difficulty"])
         for item in self.flashcards:
             writer.writerow(
                 [
-                    item.id,
                     item.front,
                     item.back,
-                    item.difficulty,
                     "|".join(item.tags),
-                    item.explanation or "",
+                    item.difficulty,
                 ]
             )
         return stream.getvalue()
@@ -75,7 +91,12 @@ class FlashcardAgentResponse(DomainModel):
 class ExamAgentResponse(DomainModel):
     schema_version: str = "1.0"
     generated_at: str = Field(default_factory=lambda: utc_now().isoformat())
-    questions: List[ExamQuestion] = Field(default_factory=list)
+    multiple_choice: List[ExamQuestion] = Field(default_factory=list)
+    short_answer: List[ExamQuestion] = Field(default_factory=list)
+    scenario_based: List[ExamQuestion] = Field(default_factory=list)
+
+    def all_questions(self) -> List[ExamQuestion]:
+        return [*self.multiple_choice, *self.short_answer, *self.scenario_based]
 
 
 class MindmapAgentResponse(DomainModel):
@@ -83,6 +104,7 @@ class MindmapAgentResponse(DomainModel):
     generated_at: str = Field(default_factory=lambda: utc_now().isoformat())
     root: MindmapNode
     markdown: str = ""
+    mermaid: str = ""
 
     def as_markdown(self) -> str:
         if self.markdown:

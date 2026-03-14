@@ -1,9 +1,19 @@
-SUMMARY_PROMPT = """You are a technical study assistant. Summarize the chapter in concise markdown with key points and practical notes."""
+from __future__ import annotations
 
-CONCEPT_PROMPT = """Extract key concepts from the chapter. Return strict JSON list with fields: name, description, tags."""
+from functools import lru_cache
+from pathlib import Path
 
-MINDMAP_PROMPT = """Build a markdown mindmap using nested bullet points from the chapter content."""
+PROMPTS_DIR = Path(__file__).resolve().parent
 
-FLASHCARD_PROMPT = """Create study flashcards in CSV with columns: question,answer,difficulty."""
 
-EXAM_PROMPT = """Generate 5 challenging exam-style questions in markdown with short expected answers."""
+@lru_cache(maxsize=None)
+def load_prompt(filename: str) -> str:
+    path = PROMPTS_DIR / filename
+    return path.read_text(encoding="utf-8").strip()
+
+
+CONCEPT_PROMPT = load_prompt("concept_prompt.md")
+ARCHITECTURE_PROMPT = load_prompt("architecture_prompt.md")
+MINDMAP_PROMPT = load_prompt("mindmap_prompt.md")
+FLASHCARD_PROMPT = load_prompt("flashcard_prompt.md")
+EXAM_PROMPT = load_prompt("exam_prompt.md")

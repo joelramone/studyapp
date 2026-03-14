@@ -1,32 +1,49 @@
 from __future__ import annotations
 
-from typing import List
+from pathlib import Path
 
 from agents.base_agent import BaseAgent
-from core.models import Concept
+from core.schemas import ConceptAgentResponse
 from prompts.templates import CONCEPT_PROMPT
 
 
 class ConceptAgent(BaseAgent):
-    def run(self, chapter_text: str) -> List[Concept]:
-        payload = self.generate_json(CONCEPT_PROMPT, chapter_text)
-        concepts: List[Concept] = []
-        if isinstance(payload, list):
-            for item in payload:
-                if isinstance(item, dict):
-                    concepts.append(
-                        Concept(
-                            name=str(item.get("name", "Unnamed concept")),
-                            description=str(item.get("description", "")),
-                            tags=[str(tag) for tag in item.get("tags", [])],
-                        )
-                    )
-        if concepts:
-            return concepts
-        return [
-            Concept(
-                name="Concept extraction unavailable",
-                description="Configure OPENAI_API_KEY to generate rich concepts.",
-                tags=["fallback"],
-            )
-        ]
+    output_name = "concepts"
+
+    def run(self, chapter_text: str, output_dir: Path | None = None) -> ConceptAgentResponse:
+        result = self.generate_structured(
+            prompt=CONCEPT_PROMPT,
+            chapter_text=chapter_text,
+            response_model=ConceptAgentResponse,
+        )
+        if output_dir:
+            self.save_json_output(result, output_dir)
+        return result
+
+    def fallback(self, chapter_text: str, response_model: type[ConceptAgentResponse]) -> ConceptAgentResponse:
+        preview = chapter_text[:400].replace("\n", " ").strip() or "Contenido no disponible"
+        return response_model(
+            summary="Fallback local: configura OPENAI_API_KEY para extracción completa.",
+            concepts=[
+                {
+                    "name": "Capítulo sin análisis remoto",
+                    "description": preview,
+                    "tags": ["fallback", "setup"],
+                }
+            ],
+            definitions=[
+                {
+                    "term": "OPENAI_API_KEY",
+                    "definition": "Variable requerida para habilitar análisis real con modelos OpenAI.",
+                }
+            ],
+            relationships=[
+                {
+                    "source_term": "OPENAI_API_KEY",
+                    "target_term": "Análisis de conceptos",
+                    "relation": "habilita",
+                    "explanation": "Sin API key, solo se genera salida local mínima.",
+                }
+            ],
+            tags=["fallback", "configuración"],
+        )

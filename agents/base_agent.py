@@ -1,49 +1,50 @@
 from __future__ import annotations
 
-import json
 import logging
-from typing import Any
+from pathlib import Path
+from typing import TypeVar
 
-from openai import OpenAI
+from pydantic import BaseModel
 
-from core.config import settings
+from core.models import dump_json_file
+from services.openai_client import OpenAIClient
 
 logger = logging.getLogger(__name__)
 
+T = TypeVar("T", bound=BaseModel)
+
 
 class BaseAgent:
-    """Wrapper around OpenAI chat completion with safe fallback behavior."""
+    """Shared behavior for OpenAI-backed agents with validated outputs."""
+
+    output_name: str = "output"
 
     def __init__(self) -> None:
-        self.model = settings.openai_model
-        self.client = OpenAI(api_key=settings.openai_api_key) if settings.openai_api_key else None
+        self.openai = OpenAIClient()
 
-    def generate_text(self, system_prompt: str, user_content: str) -> str:
-        if not self.client:
-            logger.warning("OPENAI_API_KEY not configured; returning local fallback text")
-            return self.local_fallback(user_content)
-
-        try:
-            response = self.client.responses.create(
-                model=self.model,
-                input=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+    def generate_structured(self, *, prompt: str, chapter_text: str, response_model: type[T]) -> T:
+        if self.openai.enabled:
+            return self.openai.generate_structured(
+                system_prompt=prompt,
+                user_content=chapter_text,
+                response_model=response_model,
+                max_attempts=2,
             )
-            return response.output_text.strip()
-        except Exception as exc:  # pragma: no cover - external API
-            logger.exception("OpenAI request failed")
-            raise RuntimeError("OpenAI API call failed") from exc
 
-    def generate_json(self, system_prompt: str, user_content: str) -> Any:
-        text = self.generate_text(system_prompt, user_content)
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            logger.warning("Model did not return valid JSON; applying fallback JSON")
-            return []
+        logger.warning("OPENAI_API_KEY not configured; using deterministic local fallback")
+        return self.fallback(chapter_text, response_model)
 
-    def local_fallback(self, user_content: str) -> str:
-        preview = user_content[:300].replace("\n", " ")
-        return f"Fallback output generated without OpenAI API. Context: {preview}..."
+    def fallback(self, chapter_text: str, response_model: type[T]) -> T:
+        raise NotImplementedError
+
+    def save_json_output(self, output: BaseModel, output_dir: Path) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / f"{self.output_name}.json"
+        dump_json_file(output, path)
+        return path
+
+    def save_text_output(self, content: str, output_dir: Path, *, filename: str) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / filename
+        path.write_text(content, encoding="utf-8")
+        return path
