@@ -12,6 +12,8 @@ class Settings(BaseSettings):
 
     openai_api_key: str = Field(default="")
     openai_model: str = Field(default="gpt-4o-mini")
+    openai_temperature: float = Field(default=0.1)
+    openai_max_output_tokens: int = Field(default=3500)
     data_dir: Path = Field(default=Path("data"))
     output_dir: Path = Field(default=Path("output"))
     log_level: str = Field(default="INFO")
