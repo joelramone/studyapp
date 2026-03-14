@@ -13,7 +13,10 @@ from io import StringIO
 
 import streamlit as st
 
-from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists
+if __package__:
+    from .utils import chapter_dir, list_processed_documents, read_text_if_exists
+else:
+    from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists
 
 
 def _get_document() -> dict | None:
