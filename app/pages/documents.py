@@ -9,7 +9,10 @@ if str(REPO_ROOT) not in sys.path:
 
 import streamlit as st
 
-from app.pages.utils import list_processed_documents
+if __package__:
+    from .utils import list_processed_documents
+else:
+    from app.pages.utils import list_processed_documents
 
 
 def render() -> None:

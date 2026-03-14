@@ -12,7 +12,10 @@ from io import StringIO
 
 import streamlit as st
 
-from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists, zip_folder_bytes
+if __package__:
+    from .utils import chapter_dir, list_processed_documents, read_text_if_exists, zip_folder_bytes
+else:
+    from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists, zip_folder_bytes
 
 
 def _get_document() -> dict | None:

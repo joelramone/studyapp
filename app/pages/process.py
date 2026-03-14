@@ -16,7 +16,10 @@ from agents.concept_agent import ConceptAgent
 from agents.exam_agent import ExamAgent
 from agents.flashcard_agent import FlashcardAgent
 from agents.mindmap_agent import MindmapAgent
-from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists
+if __package__:
+    from .utils import chapter_dir, list_processed_documents, read_text_if_exists
+else:
+    from app.pages.utils import chapter_dir, list_processed_documents, read_text_if_exists
 
 
 OUTPUT_LABELS = {
