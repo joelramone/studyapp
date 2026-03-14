@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from app.bootstrap import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 import logging
-from pathlib import Path
 
 import streamlit as st
 
