@@ -67,3 +67,33 @@ Ver `.env.example`:
 ```bash
 pytest -q
 ```
+
+
+## Modelos de dominio y contratos JSON
+
+El dominio interno en `core/models.py` ahora define entidades Pydantic tipadas y listas para persistencia JSON:
+
+- `Document`: documento fuente con estado, idioma, metadatos y capítulos.
+- `Chapter`: capítulo normalizado con índice, contenido, resumen opcional y metadatos.
+- `Chunk`: unidad de texto con span (`start_char`/`end_char`) y tipo de chunk.
+- `AgentRun`: trazabilidad de ejecución de agentes (estado, tiempos, duración, error, metadata).
+- `ConceptItem`: concepto con tags, aliases, prerequisitos y score de confianza.
+- `ArchitectureComponent`: componente arquitectónico con responsabilidades, entradas/salidas y tecnologías.
+- `Relationship`: relación dirigida entre componentes con tipo semántico.
+- `Flashcard`: tarjeta exportable (frente/reverso, dificultad, tags, explicación).
+- `ExamQuestion`: pregunta de examen con tipo (`multiple_choice`, `true_false`, `short_answer`) y validaciones.
+- `MindmapNode`: nodo jerárquico de mapa mental con hijos recursivos.
+
+Contratos de salida por agente en `core/schemas.py`:
+
+- `ConceptAgentResponse`: JSON consistente para `Concept Agent`.
+- `ArchitectureAgentResponse`: incluye `components`, `relationships` y `flow_steps` paso a paso.
+- `FlashcardAgentResponse`: incluye `to_csv()` para exportación.
+- `ExamAgentResponse`: soporta múltiples tipos de pregunta.
+- `MindmapAgentResponse`: entrega estructura jerárquica (`root`) y representación markdown (`as_markdown()`).
+
+Helpers de serialización (`core/models.py`):
+
+- `to_pretty_json(model)`
+- `dump_json_file(data, path)`
+- `load_json_file(path)`
