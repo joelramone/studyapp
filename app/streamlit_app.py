@@ -5,8 +5,8 @@ from pathlib import Path
 
 import streamlit as st
 
+from app.pages import documents, export, process, results, upload
 from core.config import configure_logging, ensure_directories, settings
-from core.orchestrator import StudyBrainOrchestrator
 
 configure_logging()
 ensure_directories()
@@ -14,45 +14,59 @@ logger = logging.getLogger(__name__)
 
 
 st.set_page_config(page_title="study_brain", page_icon="🧠", layout="wide")
-st.title("🧠 study_brain")
-st.caption("Segundo cerebro técnico para estudiar documentación en PDF")
 
-st.sidebar.header("Configuración")
-st.sidebar.write(f"Modelo: `{settings.openai_model}`")
-st.sidebar.write(f"Output: `{settings.output_dir}`")
 
-uploaded_pdf = st.file_uploader("Sube un PDF técnico", type=["pdf"])
+def _init_session_state() -> None:
+    st.session_state.setdefault("uploaded_files", [])
+    st.session_state.setdefault("selected_doc_slug", None)
+    st.session_state.setdefault("selected_chapter_index", None)
+    st.session_state.setdefault(
+        "selected_outputs",
+        {
+            "summary": True,
+            "concepts": True,
+            "mindmap": True,
+            "flashcards": True,
+            "exam": True,
+        },
+    )
 
-if uploaded_pdf:
-    target_path = settings.data_dir / "pdfs" / uploaded_pdf.name
-    target_path.write_bytes(uploaded_pdf.getbuffer())
-    st.success(f"PDF guardado en: {target_path}")
 
-    if st.button("Procesar PDF", type="primary"):
-        orchestrator = StudyBrainOrchestrator()
-        try:
-            with st.spinner("Generando material de estudio..."):
-                outputs = orchestrator.process_pdf(Path(target_path))
-            st.success(f"Proceso completado. Capítulos procesados: {len(outputs)}")
+def _sidebar() -> str:
+    st.sidebar.header("study_brain")
+    st.sidebar.caption("Segundo cerebro técnico para estudiar PDFs")
+    st.sidebar.divider()
+    st.sidebar.write(f"Modelo: `{settings.openai_model}`")
+    st.sidebar.write(f"Input PDFs: `{settings.data_dir / 'pdfs'}`")
+    st.sidebar.write(f"Output: `{settings.output_dir}`")
+    st.sidebar.divider()
+    return st.sidebar.radio(
+        "Navegación",
+        options=["Upload", "Documents", "Process", "Results", "Export"],
+        key="active_page",
+    )
 
-            for out in outputs:
-                with st.expander(f"Capítulo {out.chapter_index}", expanded=False):
-                    st.markdown("### summary.md")
-                    st.markdown(out.summary_md)
 
-                    st.markdown("### concepts.json")
-                    st.json([concept.model_dump() for concept in out.concepts])
+def main() -> None:
+    _init_session_state()
+    st.title("🧠 study_brain")
 
-                    st.markdown("### mindmap.md")
-                    st.code(out.mindmap_md, language="markdown")
+    page = _sidebar()
 
-                    st.markdown("### flashcards.csv")
-                    st.code(out.flashcards_csv, language="csv")
+    if page == "Upload":
+        upload.render()
+    elif page == "Documents":
+        documents.render()
+    elif page == "Process":
+        process.render()
+    elif page == "Results":
+        results.render()
+    elif page == "Export":
+        export.render()
+    else:
+        logger.error("Unknown page selected: %s", page)
+        st.error("Página desconocida")
 
-                    st.markdown("### exam_questions.md")
-                    st.markdown(out.exam_questions_md)
-        except Exception as exc:
-            logger.exception("Error while processing PDF")
-            st.error(f"Error al procesar PDF: {exc}")
-else:
-    st.info("Carga un PDF para comenzar.")
+
+if __name__ == "__main__":
+    main()
