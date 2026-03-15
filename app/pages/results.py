@@ -98,7 +98,7 @@ def render() -> None:
         if csv_content:
             rows = _csv_table(csv_content)
             if rows:
-                st.dataframe(rows, use_container_width=True, hide_index=True)
+                st.dataframe(rows, width="stretch", hide_index=True)
             else:
                 st.info("CSV generado sin filas de flashcards.")
             st.code(csv_content, language="csv")
