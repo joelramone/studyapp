@@ -63,7 +63,7 @@ def render() -> None:
         data=zip_bytes,
         file_name=f"{folder.name}.zip",
         mime="application/zip",
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Exportar flashcards CSV")
@@ -77,7 +77,7 @@ def render() -> None:
             data=csv_content,
             file_name=f"{doc['slug']}_chapter_{selected_chapter:02d}_flashcards.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
         return
 
@@ -107,5 +107,5 @@ def render() -> None:
         data=buffer.getvalue(),
         file_name=f"{doc['slug']}_flashcards.csv",
         mime="text/csv",
-        use_container_width=True,
+        width="stretch",
     )

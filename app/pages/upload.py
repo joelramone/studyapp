@@ -31,7 +31,7 @@ def _render_pdf_mode(orchestrator: StudyBrainOrchestrator) -> None:
     )
 
     if uploaded_items:
-        if st.button("Guardar archivos", type="primary", use_container_width=True):
+        if st.button("Guardar archivos", type="primary", width="stretch"):
             saved_names: list[str] = []
             for item in uploaded_items:
                 target_path = settings.data_dir / "pdfs" / item.name
@@ -48,7 +48,7 @@ def _render_pdf_mode(orchestrator: StudyBrainOrchestrator) -> None:
 
     st.dataframe(
         [{"filename": pdf.name, "size_kb": round(pdf.stat().st_size / 1024, 2)} for pdf in existing_pdfs],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 
@@ -58,7 +58,7 @@ def _render_pdf_mode(orchestrator: StudyBrainOrchestrator) -> None:
         default=[existing_pdfs[-1].name],
     )
 
-    if st.button("Procesar PDFs seleccionados", type="primary", use_container_width=True):
+    if st.button("Procesar PDFs seleccionados", type="primary", width="stretch"):
         if not selected:
             st.warning("Selecciona al menos un PDF.")
             return
@@ -97,7 +97,7 @@ def _render_notes_mode(orchestrator: StudyBrainOrchestrator) -> None:
             height=260,
             placeholder="Pega el contenido generado en NotebookLM o tus notas manuales.",
         )
-        submit_notes = st.form_submit_button("Procesar Notes", type="primary", use_container_width=True)
+        submit_notes = st.form_submit_button("Procesar Notes", type="primary", width="stretch")
 
     if not submit_notes:
         return

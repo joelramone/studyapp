@@ -55,7 +55,7 @@ def render() -> None:
                 "status": m.get("status", "-"),
             }
         ],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
     )
 

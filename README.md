@@ -115,3 +115,28 @@ Helpers de serialización (`core/models.py`):
 - `to_pretty_json(model)`
 - `dump_json_file(data, path)`
 - `load_json_file(path)`
+
+## Troubleshooting OpenAI (red/proxy/DNS)
+
+Si la app muestra errores de conectividad (por ejemplo `APIConnectionError`, `getaddrinfo failed` o timeout), revisa:
+
+1. **OPENAI_API_KEY**
+   - Define una clave válida en `.env` con `OPENAI_API_KEY=...`.
+   - Reinicia Streamlit después de cambiar variables de entorno.
+
+2. **Proxy corporativo**
+   - Configura variables estándar si tu red lo requiere: `HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`.
+   - Verifica que el proxy permita salida HTTPS a OpenAI.
+
+3. **DNS**
+   - Si aparece `getaddrinfo failed`, hay problema de resolución de nombres.
+   - Revisa la configuración DNS del sistema o de tu VPN/red corporativa.
+
+4. **Firewall / red saliente**
+   - Confirma que no haya bloqueo de conexiones HTTPS salientes desde tu host/contenedor.
+   - Permite tráfico hacia endpoints de OpenAI según políticas de tu organización.
+
+5. **Timeouts de red**
+   - Si hay latencia alta o cortes intermitentes, reintenta el procesamiento del capítulo.
+
+La pantalla **Process** ahora ejecuta un health check de conectividad OpenAI y muestra mensajes accionables por categoría de error (DNS, conexión, timeout, autenticación).

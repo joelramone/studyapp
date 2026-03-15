@@ -16,6 +16,7 @@ from agents.concept_agent import ConceptAgent
 from agents.exam_agent import ExamAgent
 from agents.flashcard_agent import FlashcardAgent
 from agents.mindmap_agent import MindmapAgent
+from services.openai_client import OpenAIClient, OpenAIServiceError
 if __package__:
     from .utils import chapter_dir, list_processed_documents, read_text_if_exists
 else:
@@ -75,9 +76,30 @@ def _run_for_chapter(chapter_path: Path, selected_outputs: dict[str, bool]) -> l
     return generated
 
 
+def _render_openai_error(error: OpenAIServiceError, chapter_index: int) -> None:
+    st.error(f"Error en capítulo {chapter_index}: {error.user_message}")
+    st.warning(f"Acción sugerida: {error.actionable_hint}")
+    st.caption(
+        f"Categoría: {error.category.value} | Reintento recomendado: {'sí' if error.retryable else 'no'} | "
+        f"Fallback local disponible: {'sí' if error.fallback_allowed else 'no'}"
+    )
+
+
+def _render_connectivity_status() -> None:
+    status = OpenAIClient().health_check()
+    if status.ok:
+        st.success(status.user_message)
+        return
+
+    st.warning(status.user_message)
+    if status.actionable_hint:
+        st.caption(f"Troubleshooting: {status.actionable_hint}")
+
+
 def render() -> None:
     st.subheader("3) Process")
     st.write("Ejecuta el pipeline de agentes por capítulo o documento completo.")
+    _render_connectivity_status()
 
     doc = _get_document()
     if not doc:
@@ -102,12 +124,14 @@ def render() -> None:
     selected_chapter = st.selectbox(
         "Capítulo",
         options=chapter_indexes,
-        index=0 if st.session_state.get("selected_chapter_index") not in chapter_indexes else chapter_indexes.index(st.session_state["selected_chapter_index"]),
+        index=0
+        if st.session_state.get("selected_chapter_index") not in chapter_indexes
+        else chapter_indexes.index(st.session_state["selected_chapter_index"]),
     )
     st.session_state["selected_chapter_index"] = selected_chapter
 
     cols = st.columns(2)
-    if cols[0].button("Procesar capítulo seleccionado", type="primary", use_container_width=True):
+    if cols[0].button("Procesar capítulo seleccionado", type="primary", width="stretch"):
         chapter_path = chapter_dir(doc, selected_chapter)
         try:
             with st.status(f"Procesando capítulo {selected_chapter}", expanded=True) as status:
@@ -116,11 +140,14 @@ def render() -> None:
                 status.write(f"Outputs generados: {', '.join(generated)}")
                 status.update(label="Capítulo procesado", state="complete")
             st.success(f"Capítulo {selected_chapter} procesado correctamente.")
+        except OpenAIServiceError as exc:
+            _render_openai_error(exc, selected_chapter)
+            st.code(traceback.format_exc())
         except Exception as exc:
             st.error(f"Error en capítulo {selected_chapter}: {exc}")
             st.code(traceback.format_exc())
 
-    if cols[1].button("Procesar documento completo", use_container_width=True):
+    if cols[1].button("Procesar documento completo", width="stretch"):
         done = 0
         with st.status("Procesando documento completo", expanded=True) as status:
             for idx in chapter_indexes:
@@ -130,9 +157,15 @@ def render() -> None:
                     _run_for_chapter(path, st.session_state["selected_outputs"])
                     done += 1
                     status.write(f"✅ Capítulo {idx} completado")
+                except OpenAIServiceError as exc:
+                    status.write(f"⚠️ Capítulo {idx}: {exc.user_message}")
+                    status.write(f"Acción sugerida: {exc.actionable_hint}")
                 except Exception as exc:
                     status.write(f"❌ Capítulo {idx} con error: {exc}")
-            status.update(label=f"Finalizado ({done}/{len(chapter_indexes)})", state="complete" if done else "error")
+            status.update(
+                label=f"Finalizado ({done}/{len(chapter_indexes)})",
+                state="complete" if done else "error",
+            )
 
     st.markdown("### Reproceso rápido por capítulo")
     for idx in chapter_indexes:
@@ -140,10 +173,12 @@ def render() -> None:
         with col_a:
             st.write(f"Capítulo {idx}")
         with col_b:
-            if st.button("Reprocesar", key=f"reprocess_{doc['slug']}_{idx}", use_container_width=True):
+            if st.button("Reprocesar", key=f"reprocess_{doc['slug']}_{idx}", width="stretch"):
                 try:
                     with st.spinner(f"Reprocesando capítulo {idx}..."):
                         _run_for_chapter(chapter_dir(doc, idx), st.session_state["selected_outputs"])
                     st.success(f"Capítulo {idx} reprocesado.")
+                except OpenAIServiceError as exc:
+                    _render_openai_error(exc, idx)
                 except Exception as exc:
                     st.error(f"Error reprocesando capítulo {idx}: {exc}")
