@@ -29,6 +29,10 @@ Completa `.env.local`:
 OPENAI_API_KEY=tu_api_key
 ```
 
+## Nota de seguridad
+
+- El proyecto fija `next@15.2.6` (parche de seguridad recomendado para la línea 15.2.x).
+
 ## Desarrollo local
 
 ```bash
